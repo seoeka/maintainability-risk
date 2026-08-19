@@ -1,0 +1,17 @@
+{
+  "name": "maintainability-risk-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend proxy",
+  "type": "commonjs",
+  "scripts": {
+    "local": "vercel dev --listen 3000",
+    "deploy": "vercel --prod"
+  },
+  "devDependencies": {
+    "vercel": "^58.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

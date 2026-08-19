@@ -1,0 +1,135 @@
+{
+  "name": "maintainability-risk-analyzer",
+  "displayName": "Maintainability Risk Analyzer",
+  "description": "VS Code Extension untuk mengidentifikasi risiko maintainability pada kode JavaScript menggunakan Maintainability Index berbasis software metrics dan LLM proxy sebagai penjelas kontekstual.",
+  "version": "0.3.0",
+  "publisher": "ekasari-amalia",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "maintainability",
+    "software metrics",
+    "cyclomatic complexity",
+    "javascript",
+    "static analysis",
+    "llm",
+    "maintainability index",
+    "halstead volume",
+    "lines of code"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onCommand:maintainability.analyzeCurrentFile",
+    "onCommand:maintainability.analyzeWorkspace",
+    "onCommand:maintainability.showSummary",
+    "onCommand:maintainability.explainRisk",
+    "onCommand:maintainability.explainRiskAt",
+    "onCommand:maintainability.exportReport",
+    "onCommand:maintainability.testLLMProxy"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "maintainability.analyzeCurrentFile",
+        "title": "Maintainability: Analyze Current JavaScript File"
+      },
+      {
+        "command": "maintainability.analyzeWorkspace",
+        "title": "Maintainability: Analyze JavaScript Workspace"
+      },
+      {
+        "command": "maintainability.showSummary",
+        "title": "Maintainability: Show Maintainability Summary"
+      },
+      {
+        "command": "maintainability.explainRisk",
+        "title": "Maintainability: Explain Maintainability Risk"
+      },
+      {
+        "command": "maintainability.explainRiskAt",
+        "title": "Maintainability: Explain Maintainability Risk at Cursor"
+      },
+      {
+        "command": "maintainability.exportReport",
+        "title": "Maintainability: Export Workspace Report (JSON)"
+      },
+      {
+        "command": "maintainability.testLLMProxy",
+        "title": "Maintainability: Test LLM Proxy Connection"
+      }
+    ],
+    "configuration": {
+      "title": "Maintainability Risk Analyzer",
+      "properties": {
+        "maintainabilityRiskAnalyzer.showLowRiskDiagnostics": {
+          "type": "boolean",
+          "default": false,
+          "description": "Jika aktif, fungsi Low Risk juga ditampilkan sebagai Diagnostic Information. Default mati agar editor tidak terlalu ramai."
+        },
+        "maintainabilityRiskAnalyzer.analyzeOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Jalankan analisis otomatis saat file JavaScript disimpan."
+        },
+        "maintainabilityRiskAnalyzer.llm.model": {
+          "type": "string",
+          "default": "gpt-4.1-mini",
+          "description": "Nama model yang diteruskan ke backend Vercel/OpenAI API. Model ini hanya digunakan untuk penjelasan, bukan perhitungan metrik atau klasifikasi risiko."
+        },
+        "maintainabilityRiskAnalyzer.llm.maxSnippetCharacters": {
+          "type": "number",
+          "default": 6000,
+          "minimum": 500,
+          "description": "Panjang maksimum potongan fungsi yang dikirim ke LLM."
+        },
+        "maintainabilityRiskAnalyzer.privacy.sendCodeToLLM": {
+          "type": "boolean",
+          "default": true,
+          "description": "Jika aktif, potongan fungsi dan hasil metrik dikirim ke backend Vercel untuk dibuatkan penjelasan berbasis LLM."
+        },
+        "maintainabilityRiskAnalyzer.llm.proxyEndpoint": {
+          "type": "string",
+          "default": "https://maintainability-risk-proxy.vercel.app/api/explain",
+          "description": "Endpoint backend Vercel/proxy LLM yang meneruskan permintaan ke OpenAI API."
+        },
+        "maintainabilityRiskAnalyzer.llm.proxyToken": {
+          "type": "string",
+          "default": "",
+          "description": "Token opsional untuk header x-maintainability-token jika backend memakai PROXY_ACCESS_TOKEN. Kosongkan jika backend tidak memakai token."
+        },
+        "maintainabilityRiskAnalyzer.llm.requestTimeoutMs": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 5000,
+          "description": "Timeout request ke backend proxy LLM dalam milidetik."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runMetricSmokeTest.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.92.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.5.0"
+  },
+  "commands": []
+}
