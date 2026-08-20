@@ -2,7 +2,7 @@
   "name": "maintainability-risk-analyzer",
   "displayName": "Maintainability Risk Analyzer",
   "description": "VS Code Extension untuk mengidentifikasi risiko maintainability pada kode JavaScript menggunakan Maintainability Index berbasis software metrics dan LLM proxy sebagai penjelas kontekstual.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "seoeka",
   "repository": {
     "type": "git",
