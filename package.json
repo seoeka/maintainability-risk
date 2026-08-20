@@ -2,7 +2,7 @@
   "name": "maintainability-risk-analyzer",
   "displayName": "Maintainability Risk Analyzer",
   "description": "Extension Visual Studio Code untuk menganalisis risiko maintainability pada kode JavaScript menggunakan software metrics dan Maintainability Index (MI), serta memberikan penjelasan dan saran refactoring berbasis LLM.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "seoeka",
   "repository": {
     "type": "git",
