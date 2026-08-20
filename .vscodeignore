@@ -1,0 +1,15 @@
+.vscode/**
+.git/**
+.github/**
+
+src/**
+sample/**
+backend-vercel/**
+
+*.ts
+*.map
+tsconfig.json
+
+node_modules/**
+
+package-lock.json

@@ -3,7 +3,11 @@
   "displayName": "Maintainability Risk Analyzer",
   "description": "VS Code Extension untuk mengidentifikasi risiko maintainability pada kode JavaScript menggunakan Maintainability Index berbasis software metrics dan LLM proxy sebagai penjelas kontekstual.",
   "version": "0.3.0",
-  "publisher": "ekasari-amalia",
+  "publisher": "seoeka",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seoeka/maintainability-risk.git"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.92.0"
