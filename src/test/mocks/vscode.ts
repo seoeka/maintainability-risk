@@ -1,3 +1,10 @@
+export enum DiagnosticSeverity {
+  Error = 0,
+  Warning = 1,
+  Information = 2,
+  Hint = 3
+}
+
 export class Position {
   public line: number;
   public character: number;
@@ -13,20 +20,32 @@ export class Range {
   public end: Position;
 
   constructor(
-    startLineOrPosition: number | Position,
-    startCharacterOrPosition: number | Position,
+    startLine: number,
+    startCharacter: number,
+    endLine: number,
+    endCharacter: number
+  );
+
+  constructor(
+    start: Position,
+    end: Position
+  );
+
+  constructor(
+    startOrLine: number | Position,
+    startCharacterOrEnd: number | Position,
     endLine?: number,
     endCharacter?: number
   ) {
     if (
-      typeof startLineOrPosition === 'number' &&
-      typeof startCharacterOrPosition === 'number' &&
+      typeof startOrLine === 'number' &&
+      typeof startCharacterOrEnd === 'number' &&
       endLine !== undefined &&
       endCharacter !== undefined
     ) {
       this.start = new Position(
-        startLineOrPosition,
-        startCharacterOrPosition
+        startOrLine,
+        startCharacterOrEnd
       );
 
       this.end = new Position(
@@ -34,8 +53,8 @@ export class Range {
         endCharacter
       );
     } else {
-      this.start = startLineOrPosition as Position;
-      this.end = startCharacterOrPosition as Position;
+      this.start = startOrLine as Position;
+      this.end = startCharacterOrEnd as Position;
     }
   }
 
@@ -66,18 +85,10 @@ export class Range {
   }
 }
 
-export enum DiagnosticSeverity {
-  Error = 0,
-  Warning = 1,
-  Information = 2,
-  Hint = 3
-}
-
 export class Diagnostic {
   public range: Range;
   public message: string;
   public severity: DiagnosticSeverity;
-
   public source?: string;
   public code?: string;
 

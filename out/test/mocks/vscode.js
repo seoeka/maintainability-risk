@@ -1,6 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Diagnostic = exports.DiagnosticSeverity = exports.Range = exports.Position = void 0;
+exports.Diagnostic = exports.Range = exports.Position = exports.DiagnosticSeverity = void 0;
+var DiagnosticSeverity;
+(function (DiagnosticSeverity) {
+    DiagnosticSeverity[DiagnosticSeverity["Error"] = 0] = "Error";
+    DiagnosticSeverity[DiagnosticSeverity["Warning"] = 1] = "Warning";
+    DiagnosticSeverity[DiagnosticSeverity["Information"] = 2] = "Information";
+    DiagnosticSeverity[DiagnosticSeverity["Hint"] = 3] = "Hint";
+})(DiagnosticSeverity || (exports.DiagnosticSeverity = DiagnosticSeverity = {}));
 class Position {
     line;
     character;
@@ -13,17 +20,17 @@ exports.Position = Position;
 class Range {
     start;
     end;
-    constructor(startLineOrPosition, startCharacterOrPosition, endLine, endCharacter) {
-        if (typeof startLineOrPosition === 'number' &&
-            typeof startCharacterOrPosition === 'number' &&
+    constructor(startOrLine, startCharacterOrEnd, endLine, endCharacter) {
+        if (typeof startOrLine === 'number' &&
+            typeof startCharacterOrEnd === 'number' &&
             endLine !== undefined &&
             endCharacter !== undefined) {
-            this.start = new Position(startLineOrPosition, startCharacterOrPosition);
+            this.start = new Position(startOrLine, startCharacterOrEnd);
             this.end = new Position(endLine, endCharacter);
         }
         else {
-            this.start = startLineOrPosition;
-            this.end = startCharacterOrPosition;
+            this.start = startOrLine;
+            this.end = startCharacterOrEnd;
         }
     }
     contains(position) {
@@ -45,13 +52,6 @@ class Range {
     }
 }
 exports.Range = Range;
-var DiagnosticSeverity;
-(function (DiagnosticSeverity) {
-    DiagnosticSeverity[DiagnosticSeverity["Error"] = 0] = "Error";
-    DiagnosticSeverity[DiagnosticSeverity["Warning"] = 1] = "Warning";
-    DiagnosticSeverity[DiagnosticSeverity["Information"] = 2] = "Information";
-    DiagnosticSeverity[DiagnosticSeverity["Hint"] = 3] = "Hint";
-})(DiagnosticSeverity || (exports.DiagnosticSeverity = DiagnosticSeverity = {}));
 class Diagnostic {
     range;
     message;
