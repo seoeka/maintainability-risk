@@ -125,15 +125,20 @@
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runMetricSmokeTest.js"
+    "test": "npm run compile && mocha --require ts-node/register --require ./src/test/setup.ts --extensions ts src/test/**/*.test.ts"  
   },
   "dependencies": {
     "@babel/parser": "^7.28.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
+    "@types/mocha": "^10.0.10",
+    "@types/mock-require": "^3.0.0",
+    "@types/node": "^20.19.43",
     "@types/vscode": "^1.92.0",
     "@vscode/vsce": "^3.2.1",
+    "mocha": "^11.8.0",
+    "mock-require": "^3.0.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.5.0"
   },
   "commands": []
