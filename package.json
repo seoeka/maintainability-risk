@@ -125,7 +125,7 @@
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "lint": "eslint src --ext ts",
-    "test": "npm run compile && mocha --require ts-node/register --require \"./src/test/setup.ts\" --extensions ts \"src/test/**/*.test.ts\""
+    "test": "npm run compile && mocha --require ts-node/register --extensions ts \"src/test/**/*.test.ts\""
   },
   "dependencies": {
     "@babel/parser": "^7.28.0"
