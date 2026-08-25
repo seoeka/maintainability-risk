@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_assert_1 = __importDefault(require("node:assert"));
-const node_test_1 = require("node:test");
+const mocha_1 = require("mocha");
 const llmClient_1 = require("../../llm/llmClient");
 const settings = {
     showLowRiskDiagnostics: false,
@@ -90,15 +90,15 @@ function mockFetch(response) {
         text: async () => response.text
     }));
 }
-(0, node_test_1.beforeEach)(() => {
+(0, mocha_1.beforeEach)(() => {
     globalThis.fetch = originalFetch;
 });
-(0, node_test_1.afterEach)(() => {
+(0, mocha_1.afterEach)(() => {
     globalThis.fetch = originalFetch;
 });
-(0, node_test_1.describe)('llmClient', () => {
-    (0, node_test_1.describe)('explainWithLLM', () => {
-        (0, node_test_1.it)('should use deterministic fallback when privacy disables sending code', async () => {
+(0, mocha_1.describe)('llmClient', () => {
+    (0, mocha_1.describe)('explainWithLLM', () => {
+        (0, mocha_1.it)('should use deterministic fallback when privacy disables sending code', async () => {
             const privateSettings = {
                 ...settings,
                 privacy: {
@@ -111,7 +111,7 @@ function mockFetch(response) {
             node_assert_1.default.ok(result.summary.includes('calculateRisk'));
             node_assert_1.default.ok(result.reasons.length > 0);
         });
-        (0, node_test_1.it)('should use deterministic fallback when proxy endpoint is empty', async () => {
+        (0, mocha_1.it)('should use deterministic fallback when proxy endpoint is empty', async () => {
             const invalidSettings = {
                 ...settings,
                 llm: {
@@ -123,7 +123,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.source, 'local-fallback');
             node_assert_1.default.ok(result.notes.includes('Endpoint backend proxy belum diisi'));
         });
-        (0, node_test_1.it)('should send POST request to proxy endpoint', async () => {
+        (0, mocha_1.it)('should send POST request to proxy endpoint', async () => {
             let capturedUrl = '';
             let capturedMethod = '';
             let capturedBody;
@@ -158,7 +158,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(capturedBody.role, 'explanation_layer_only');
             node_assert_1.default.strictEqual(capturedBody.functionName, 'calculateRisk');
         });
-        (0, node_test_1.it)('should send calculated risk and metrics to proxy', async () => {
+        (0, mocha_1.it)('should send calculated risk and metrics to proxy', async () => {
             let capturedBody;
             globalThis.fetch = (async (_input, init) => {
                 capturedBody = JSON.parse(String(init?.body));
@@ -166,18 +166,51 @@ function mockFetch(response) {
                     ok: true,
                     status: 200,
                     text: async () => JSON.stringify({
-                        summary: 'Test explanation'
+                        summary: 'Test explanation',
+                        riskLevel: 'Low',
+                        maintainabilityIndex: 99,
+                        metrics: {
+                            halsteadVolume: 999,
+                            cyclomaticComplexity: 1,
+                            loc: 1
+                        }
                     })
                 };
             });
             const fn = createFunction('High');
-            await (0, llmClient_1.explainWithLLM)(fn, settings);
+            const originalMetrics = JSON.parse(JSON.stringify(fn.metrics));
+            const originalRisk = JSON.parse(JSON.stringify(fn.risk));
+            const result = await (0, llmClient_1.explainWithLLM)(fn, settings);
+            /*
+             * KF9:
+             * Memastikan konteks hasil analisis
+             * dikirim kepada LLM.
+             */
             node_assert_1.default.strictEqual(capturedBody.riskLevel, 'High');
             node_assert_1.default.strictEqual(capturedBody.maintainabilityIndex, 5);
             node_assert_1.default.deepStrictEqual(capturedBody.metrics, fn.metrics);
             node_assert_1.default.deepStrictEqual(capturedBody.violations, fn.risk.violations);
+            node_assert_1.default.deepStrictEqual(capturedBody.deterministicReasons, fn.risk.deterministicExplanation);
+            /*
+             * Memastikan code snippet juga dikirim.
+             */
+            node_assert_1.default.strictEqual(capturedBody.codeSnippet, fn.snippet.slice(0, settings.llm.maxSnippetCharacters));
+            /*
+             * KNF4:
+             * Respons LLM tidak boleh mengubah
+             * hasil analisis deterministik.
+             */
+            node_assert_1.default.deepStrictEqual(fn.metrics, originalMetrics);
+            node_assert_1.default.deepStrictEqual(fn.risk, originalRisk);
+            node_assert_1.default.strictEqual(fn.risk.level, 'High');
+            node_assert_1.default.strictEqual(fn.risk.maintainabilityIndex, 5);
+            /*
+             * Respons LLM tetap berhasil diproses
+             * sebagai explanation.
+             */
+            node_assert_1.default.ok(result.summary.length > 0);
         });
-        (0, node_test_1.it)('should limit code snippet according to maxSnippetCharacters', async () => {
+        (0, mocha_1.it)('should limit code snippet according to maxSnippetCharacters', async () => {
             let capturedBody;
             globalThis.fetch = (async (_input, init) => {
                 capturedBody = JSON.parse(String(init?.body));
@@ -198,7 +231,7 @@ function mockFetch(response) {
             });
             node_assert_1.default.ok(capturedBody.codeSnippet.length <= 20);
         });
-        (0, node_test_1.it)('should parse structured LLM response', async () => {
+        (0, mocha_1.it)('should parse structured LLM response', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -227,7 +260,7 @@ function mockFetch(response) {
             node_assert_1.default.deepStrictEqual(result.reasons, ['Cyclomatic Complexity tinggi.']);
             node_assert_1.default.strictEqual(result.source, 'llm');
         });
-        (0, node_test_1.it)('should parse explanation field from response', async () => {
+        (0, mocha_1.it)('should parse explanation field from response', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -238,7 +271,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.maintainabilityImpact, 'Fungsi memiliki kompleksitas yang tinggi.');
             node_assert_1.default.strictEqual(result.rawText, 'Fungsi memiliki kompleksitas yang tinggi.');
         });
-        (0, node_test_1.it)('should parse output_text response', async () => {
+        (0, mocha_1.it)('should parse output_text response', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -249,7 +282,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.maintainabilityImpact, 'Gunakan pemecahan fungsi untuk mengurangi kompleksitas.');
             node_assert_1.default.strictEqual(result.rawText, 'Gunakan pemecahan fungsi untuk mengurangi kompleksitas.');
         });
-        (0, node_test_1.it)('should parse nested output content response', async () => {
+        (0, mocha_1.it)('should parse nested output content response', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -267,7 +300,7 @@ function mockFetch(response) {
             const result = await (0, llmClient_1.explainWithLLM)(createFunction('Medium'), settings);
             node_assert_1.default.strictEqual(result.maintainabilityImpact, 'Penjelasan dari nested output.');
         });
-        (0, node_test_1.it)('should parse JSON returned inside text response', async () => {
+        (0, mocha_1.it)('should parse JSON returned inside text response', async () => {
             const jsonText = JSON.stringify({
                 summary: 'Penjelasan dari JSON text.',
                 refactoredCode: 'function better() {}',
@@ -285,7 +318,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.summary, 'Penjelasan dari JSON text.');
             node_assert_1.default.strictEqual(result.refactoredCode, 'function better() {}');
         });
-        (0, node_test_1.it)('should use default positive findings for Low Risk', async () => {
+        (0, mocha_1.it)('should use default positive findings for Low Risk', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -296,7 +329,7 @@ function mockFetch(response) {
             node_assert_1.default.ok(result.positiveFindings.length > 0);
             node_assert_1.default.ok(result.positiveFindings.some((item) => item.includes('Maintainability Index')));
         });
-        (0, node_test_1.it)('should use deterministic reasons when LLM reasons are missing', async () => {
+        (0, mocha_1.it)('should use deterministic reasons when LLM reasons are missing', async () => {
             mockFetch({
                 ok: true,
                 text: JSON.stringify({
@@ -307,7 +340,7 @@ function mockFetch(response) {
             const result = await (0, llmClient_1.explainWithLLM)(fn, settings);
             node_assert_1.default.deepStrictEqual(result.reasons, fn.risk.deterministicExplanation);
         });
-        (0, node_test_1.it)('should use fallback when backend returns invalid JSON', async () => {
+        (0, mocha_1.it)('should use fallback when backend returns invalid JSON', async () => {
             mockFetch({
                 ok: true,
                 text: 'this is not valid structured response'
@@ -316,7 +349,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.source, 'local-fallback');
             node_assert_1.default.ok(result.notes.includes('format penjelasan'));
         });
-        (0, node_test_1.it)('should use fallback when backend returns empty response', async () => {
+        (0, mocha_1.it)('should use fallback when backend returns empty response', async () => {
             mockFetch({
                 ok: true,
                 text: ''
@@ -324,7 +357,7 @@ function mockFetch(response) {
             const result = await (0, llmClient_1.explainWithLLM)(createFunction('Medium'), settings);
             node_assert_1.default.strictEqual(result.source, 'local-fallback');
         });
-        (0, node_test_1.it)('should use fallback when backend returns HTTP error', async () => {
+        (0, mocha_1.it)('should use fallback when backend returns HTTP error', async () => {
             mockFetch({
                 ok: false,
                 status: 500,
@@ -336,7 +369,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.source, 'local-fallback');
             node_assert_1.default.ok(result.notes.includes('Internal Server Error'));
         });
-        (0, node_test_1.it)('should use fallback when backend throws an error', async () => {
+        (0, mocha_1.it)('should use fallback when backend throws an error', async () => {
             globalThis.fetch = (async () => {
                 throw new Error('Network failure');
             });
@@ -344,7 +377,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.source, 'local-fallback');
             node_assert_1.default.ok(result.notes.includes('Network failure'));
         });
-        (0, node_test_1.it)('should include proxy token when configured', async () => {
+        (0, mocha_1.it)('should include proxy token when configured', async () => {
             let capturedHeaders;
             globalThis.fetch = (async (_input, init) => {
                 capturedHeaders = init?.headers;
@@ -365,7 +398,7 @@ function mockFetch(response) {
             });
             node_assert_1.default.strictEqual(capturedHeaders?.['x-maintainability-token'], 'secret-token');
         });
-        (0, node_test_1.it)('should not include proxy token when token is empty', async () => {
+        (0, mocha_1.it)('should not include proxy token when token is empty', async () => {
             let capturedHeaders;
             globalThis.fetch = (async (_input, init) => {
                 capturedHeaders = init?.headers;
@@ -381,8 +414,8 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(capturedHeaders?.['x-maintainability-token'], undefined);
         });
     });
-    (0, node_test_1.describe)('testLLMProxy', () => {
-        (0, node_test_1.it)('should return false when endpoint is empty', async () => {
+    (0, mocha_1.describe)('testLLMProxy', () => {
+        (0, mocha_1.it)('should return false when endpoint is empty', async () => {
             const result = await (0, llmClient_1.testLLMProxy)({
                 ...settings,
                 llm: {
@@ -393,7 +426,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.ok, false);
             node_assert_1.default.ok(result.message.includes('Endpoint backend proxy belum diisi'));
         });
-        (0, node_test_1.it)('should successfully perform health check', async () => {
+        (0, mocha_1.it)('should successfully perform health check', async () => {
             let capturedBody;
             globalThis.fetch = (async (_input, init) => {
                 capturedBody = JSON.parse(String(init?.body));
@@ -410,7 +443,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(capturedBody.functionName, 'healthCheck');
             node_assert_1.default.strictEqual(capturedBody.maintainabilityIndex, 100);
         });
-        (0, node_test_1.it)('should send model configuration during health check', async () => {
+        (0, mocha_1.it)('should send model configuration during health check', async () => {
             let capturedBody;
             globalThis.fetch = (async (_input, init) => {
                 capturedBody = JSON.parse(String(init?.body));
@@ -423,7 +456,7 @@ function mockFetch(response) {
             await (0, llmClient_1.testLLMProxy)(settings);
             node_assert_1.default.strictEqual(capturedBody.model, 'test-model');
         });
-        (0, node_test_1.it)('should return false when backend returns HTTP error', async () => {
+        (0, mocha_1.it)('should return false when backend returns HTTP error', async () => {
             mockFetch({
                 ok: false,
                 status: 503,
@@ -434,7 +467,7 @@ function mockFetch(response) {
             node_assert_1.default.ok(result.message.includes('503'));
             node_assert_1.default.ok(result.message.includes('Service unavailable'));
         });
-        (0, node_test_1.it)('should return false when backend request throws error', async () => {
+        (0, mocha_1.it)('should return false when backend request throws error', async () => {
             globalThis.fetch = (async () => {
                 throw new Error('Connection refused');
             });
@@ -442,7 +475,7 @@ function mockFetch(response) {
             node_assert_1.default.strictEqual(result.ok, false);
             node_assert_1.default.ok(result.message.includes('Connection refused'));
         });
-        (0, node_test_1.it)('should include authentication token in health check', async () => {
+        (0, mocha_1.it)('should include authentication token in health check', async () => {
             let capturedHeaders;
             globalThis.fetch = (async (_input, init) => {
                 capturedHeaders = init?.headers;

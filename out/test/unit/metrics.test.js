@@ -6,15 +6,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_assert_1 = __importDefault(require("node:assert"));
 const parser_1 = require("@babel/parser");
 const metrics_1 = require("../../analyzer/metrics");
-const node_test_1 = require("node:test");
+const mocha_1 = require("mocha");
 function parseFunction(source) {
     const ast = (0, parser_1.parse)(source, {
         sourceType: 'unambiguous'
     });
     return ast.program.body[0];
 }
-(0, node_test_1.describe)('metrics', () => {
-    (0, node_test_1.it)('should calculate LOC correctly', () => {
+(0, mocha_1.describe)('metrics', () => {
+    (0, mocha_1.it)('should calculate LOC correctly', () => {
         const source = `
 function simple() {
   const value = 10;
@@ -25,7 +25,7 @@ function simple() {
         const result = (0, metrics_1.calculateFunctionMetrics)(functionNode, source);
         node_assert_1.default.strictEqual(result.loc, 4);
     });
-    (0, node_test_1.it)('should calculate cyclomatic complexity for conditional code', () => {
+    (0, mocha_1.it)('should calculate cyclomatic complexity for conditional code', () => {
         const source = `
 function check(value) {
   if (value > 10) {
@@ -39,7 +39,7 @@ function check(value) {
         const result = (0, metrics_1.calculateFunctionMetrics)(functionNode, source);
         node_assert_1.default.strictEqual(result.cyclomaticComplexity, 2);
     });
-    (0, node_test_1.it)('should increase cyclomatic complexity for loops', () => {
+    (0, mocha_1.it)('should increase cyclomatic complexity for loops', () => {
         const source = `
 function calculate(items) {
   for (const item of items) {
@@ -53,7 +53,7 @@ function calculate(items) {
         const result = (0, metrics_1.calculateFunctionMetrics)(functionNode, source);
         node_assert_1.default.strictEqual(result.cyclomaticComplexity, 3);
     });
-    (0, node_test_1.it)('should calculate Halstead metrics', () => {
+    (0, mocha_1.it)('should calculate Halstead metrics', () => {
         const source = `
 function add(a, b) {
   const result = a + b;
@@ -67,7 +67,7 @@ function add(a, b) {
         node_assert_1.default.ok(result.halstead.totalOperands > 0);
         node_assert_1.default.ok(result.halstead.vocabulary > 0);
     });
-    (0, node_test_1.it)('should return complete raw metrics', () => {
+    (0, mocha_1.it)('should return complete raw metrics', () => {
         const source = `
 function example(value) {
   if (value) {
@@ -84,7 +84,7 @@ function example(value) {
         node_assert_1.default.ok(typeof result.loc === 'number');
         node_assert_1.default.ok(result.halstead);
     });
-    (0, node_test_1.it)('should not count nested functions in the outer function metrics', () => {
+    (0, mocha_1.it)('should not count nested functions in the outer function metrics', () => {
         const source = `
 function outer(value) {
   const helper = () => {

@@ -2,7 +2,7 @@ import assert from 'node:assert';
 
 import { calculateRisk } from '../../analyzer/riskEngine';
 import { AnalyzerSettings, RawMetrics } from '../../analyzer/types';
-import { describe, it } from 'node:test';
+import { describe, it } from 'mocha';
 
 const settings: AnalyzerSettings = {
   showLowRiskDiagnostics: false,

@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeEach, afterEach } from 'mocha';
 
 import {
   explainWithLLM,
@@ -266,24 +266,51 @@ describe('llmClient', () => {
         _input: RequestInfo | URL,
         init?: RequestInit
       ) => {
-        capturedBody = JSON.parse(String(init?.body));
+        capturedBody = JSON.parse(
+          String(init?.body)
+        );
 
         return {
           ok: true,
           status: 200,
-          text: async () => JSON.stringify({
-            summary: 'Test explanation'
-          })
+          text: async () =>
+            JSON.stringify({
+              summary: 'Test explanation',
+              riskLevel: 'Low',
+              maintainabilityIndex: 99,
+              metrics: {
+                halsteadVolume: 999,
+                cyclomaticComplexity: 1,
+                loc: 1
+              }
+            })
         };
       }) as typeof fetch;
 
-      const fn = createFunction('High');
+      const fn =
+        createFunction('High');
 
-      await explainWithLLM(
-        fn,
-        settings
-      );
+      const originalMetrics =
+        JSON.parse(
+          JSON.stringify(fn.metrics)
+        );
 
+      const originalRisk =
+        JSON.parse(
+          JSON.stringify(fn.risk)
+        );
+
+      const result =
+        await explainWithLLM(
+          fn,
+          settings
+        );
+
+      /*
+       * KF9:
+       * Memastikan konteks hasil analisis
+       * dikirim kepada LLM.
+       */
       assert.strictEqual(
         capturedBody.riskLevel,
         'High'
@@ -302,6 +329,55 @@ describe('llmClient', () => {
       assert.deepStrictEqual(
         capturedBody.violations,
         fn.risk.violations
+      );
+
+      assert.deepStrictEqual(
+        capturedBody.deterministicReasons,
+        fn.risk.deterministicExplanation
+      );
+
+      /*
+       * Memastikan code snippet juga dikirim.
+       */
+      assert.strictEqual(
+        capturedBody.codeSnippet,
+        fn.snippet.slice(
+          0,
+          settings.llm.maxSnippetCharacters
+        )
+      );
+
+      /*
+       * KNF4:
+       * Respons LLM tidak boleh mengubah
+       * hasil analisis deterministik.
+       */
+      assert.deepStrictEqual(
+        fn.metrics,
+        originalMetrics
+      );
+
+      assert.deepStrictEqual(
+        fn.risk,
+        originalRisk
+      );
+
+      assert.strictEqual(
+        fn.risk.level,
+        'High'
+      );
+
+      assert.strictEqual(
+        fn.risk.maintainabilityIndex,
+        5
+      );
+
+      /*
+       * Respons LLM tetap berhasil diproses
+       * sebagai explanation.
+       */
+      assert.ok(
+        result.summary.length > 0
       );
     });
 

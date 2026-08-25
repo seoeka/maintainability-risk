@@ -42,29 +42,22 @@ const metrics_1 = require("./metrics");
 const riskEngine_1 = require("./riskEngine");
 function isSupportedJavaScriptDocument(document) {
     const path = document.uri.fsPath.toLowerCase();
-    return document.languageId === 'javascript' || path.endsWith('.js') || path.endsWith('.mjs') || path.endsWith('.cjs');
+    return (document.languageId === 'javascript' ||
+        path.endsWith('.js') ||
+        path.endsWith('.mjs') ||
+        path.endsWith('.cjs'));
 }
 function rangeFromNode(node) {
     const startLine = Math.max((node.loc?.start?.line ?? 1) - 1, 0);
     const startColumn = Math.max(node.loc?.start?.column ?? 0, 0);
-    const endLine = Math.max((node.loc?.end?.line ?? node.loc?.start?.line ?? 1) - 1, 0);
+    const endLine = Math.max((node.loc?.end?.line ??
+        node.loc?.start?.line ??
+        1) - 1, 0);
     const endColumn = Math.max(node.loc?.end?.column ?? startColumn, startColumn);
     return new vscode.Range(new vscode.Position(startLine, startColumn), new vscode.Position(endLine, endColumn));
 }
 function snippetFromNode(document, node) {
     return document.getText(rangeFromNode(node));
-}
-function collectAnalyzableFunctions(programNode) {
-    const functions = [];
-    (0, astUtils_1.walkAst)(programNode, (node, parent) => {
-        if (!(0, astUtils_1.isFunctionNode)(node)) {
-            return;
-        }
-        // Hitung semua function, termasuk nested function, karena risiko maintainability dapat muncul di fungsi mana pun.
-        const functionParent = parent;
-        functions.push({ ...node, __analysisParent: functionParent });
-    });
-    return functions;
 }
 function analyzeTextDocument(document, settings) {
     if (!isSupportedJavaScriptDocument(document)) {
@@ -86,13 +79,15 @@ function analyzeTextDocument(document, settings) {
             tokens: false,
             allowReturnOutsideFunction: true
         });
-        if (Array.isArray(ast.errors) && ast.errors.length > 0) {
+        if (Array.isArray(ast.errors) &&
+            ast.errors.length > 0) {
             const first = ast.errors[0];
             return {
                 uri: document.uri.toString(),
                 fileName: document.fileName,
                 analyzedAt: new Date().toISOString(),
-                parseError: `${first.reasonCode ?? 'ParseError'}: ${first.message ?? 'Kode tidak dapat diparse.'}`,
+                parseError: `${first.reasonCode ?? 'ParseError'}: ` +
+                    `${first.message ?? 'Kode tidak dapat diparse.'}`,
                 dependencies: [],
                 functions: []
             };
@@ -100,7 +95,7 @@ function analyzeTextDocument(document, settings) {
         const programNode = ast.program;
         (0, astUtils_1.attachParents)(programNode);
         const dependencyResult = (0, dependencyAnalyzer_1.analyzeDependencies)(programNode);
-        const functions = collectAnalyzableFunctions(programNode);
+        const functions = (0, astUtils_1.collectAnalyzableFunctions)(programNode);
         const analyzedFunctions = functions.map((fn, index) => {
             const parent = fn.__analysisParent;
             const functionName = (0, astUtils_1.getFunctionName)(fn, parent, index + 1);
@@ -108,7 +103,10 @@ function analyzeTextDocument(document, settings) {
             const risk = (0, riskEngine_1.calculateRisk)(metrics, settings);
             const range = rangeFromNode(fn);
             return {
-                id: `${document.uri.toString()}#${functionName}:${range.start.line + 1}:${range.start.character}`,
+                id: `${document.uri.toString()}#` +
+                    `${functionName}:` +
+                    `${range.start.line + 1}:` +
+                    `${range.start.character}`,
                 functionName,
                 kind: fn.type,
                 location: {
@@ -134,7 +132,9 @@ function analyzeTextDocument(document, settings) {
         };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error
+            ? error.message
+            : String(error);
         return {
             uri: document.uri.toString(),
             fileName: document.fileName,

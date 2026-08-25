@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isFunctionNode = isFunctionNode;
 exports.walkAst = walkAst;
+exports.collectAnalyzableFunctions = collectAnalyzableFunctions;
 exports.collectTopLevelFunctions = collectTopLevelFunctions;
 exports.attachParents = attachParents;
 exports.getFunctionName = getFunctionName;
@@ -22,20 +23,50 @@ function walkAst(node, visitor, parent) {
     }
     visitor(node, parent);
     for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('__') || key === 'loc' || key === 'range' || key === 'leadingComments' || key === 'trailingComments' || key === 'innerComments') {
+        if (key.startsWith('__') ||
+            key === 'loc' ||
+            key === 'range' ||
+            key === 'leadingComments' ||
+            key === 'trailingComments' ||
+            key === 'innerComments') {
             continue;
         }
         if (Array.isArray(value)) {
             for (const child of value) {
-                if (child && typeof child === 'object' && typeof child.type === 'string') {
+                if (child &&
+                    typeof child === 'object' &&
+                    typeof child.type === 'string') {
                     walkAst(child, visitor, node);
                 }
             }
         }
-        else if (value && typeof value === 'object' && typeof value.type === 'string') {
+        else if (value &&
+            typeof value === 'object' &&
+            typeof value.type === 'string') {
             walkAst(value, visitor, node);
         }
     }
+}
+/**
+ * Mengumpulkan seluruh function yang dapat dianalisis,
+ * termasuk nested function.
+ *
+ * Fungsi ini digunakan oleh proses analisis utama
+ * dan menjadi unit yang diuji pada Unit Testing.
+ */
+function collectAnalyzableFunctions(programNode) {
+    const functions = [];
+    walkAst(programNode, (node, parent) => {
+        if (!isFunctionNode(node)) {
+            return;
+        }
+        const functionParent = parent;
+        functions.push({
+            ...node,
+            __analysisParent: functionParent
+        });
+    });
+    return functions;
 }
 function collectTopLevelFunctions(programNode) {
     const functions = [];
@@ -43,7 +74,8 @@ function collectTopLevelFunctions(programNode) {
         if (!isFunctionNode(node)) {
             return;
         }
-        // Hindari menghitung nested function sebagai fungsi terpisah untuk MVP jika parent-nya sudah function.
+        // Hindari menghitung nested function sebagai fungsi terpisah
+        // untuk kebutuhan pengumpulan top-level function.
         let cursor = parent;
         while (cursor) {
             if (isFunctionNode(cursor)) {
@@ -65,17 +97,23 @@ function attachParents(node, parent) {
         configurable: true
     });
     for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('__') || key === 'loc' || key === 'range') {
+        if (key.startsWith('__') ||
+            key === 'loc' ||
+            key === 'range') {
             continue;
         }
         if (Array.isArray(value)) {
             for (const child of value) {
-                if (child && typeof child === 'object' && typeof child.type === 'string') {
+                if (child &&
+                    typeof child === 'object' &&
+                    typeof child.type === 'string') {
                     attachParents(child, node);
                 }
             }
         }
-        else if (value && typeof value === 'object' && typeof value.type === 'string') {
+        else if (value &&
+            typeof value === 'object' &&
+            typeof value.type === 'string') {
             attachParents(value, node);
         }
     }
@@ -87,10 +125,12 @@ function getFunctionName(node, parent, fallbackIndex = 1) {
     if (node.key?.name) {
         return node.key.name;
     }
-    if (parent?.type === 'VariableDeclarator' && parent.id?.type === 'Identifier') {
+    if (parent?.type === 'VariableDeclarator' &&
+        parent.id?.type === 'Identifier') {
         return parent.id.name;
     }
-    if (parent?.type === 'AssignmentExpression' && parent.left?.type === 'MemberExpression') {
+    if (parent?.type === 'AssignmentExpression' &&
+        parent.left?.type === 'MemberExpression') {
         const property = parent.left.property;
         if (property?.type === 'Identifier') {
             return property.name;

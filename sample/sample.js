@@ -1,6 +1,44 @@
-// Contoh kode uji untuk VS Code Extension Maintainability Risk Analyzer
-// File ini berisi tiga fungsi: Low Risk, Medium Risk, dan High Risk.
-// Jalankan analisis extension pada file ini untuk melihat perbedaan kategori risiko tiap fungsi.
+function calculateCustomerRisk(customer, orders, payments) {
+  let score = 0;
+
+  if (customer.isBlocked || customer.hasFraudHistory) {
+    score += 50;
+  }
+
+  for (let i = 0; i < orders.length; i++) {
+    const order = orders[i];
+
+    if (order.total > 1000000 && order.status === "pending") {
+      score += 15;
+    } else if (order.total > 500000 && order.status === "failed") {
+      score += 10;
+    }
+
+    if (order.discount > 50 || order.quantity > 100) {
+      score += 8;
+    }
+  }
+
+  for (let j = 0; j < payments.length; j++) {
+    const payment = payments[j];
+
+    if (payment.method === "credit" && payment.failedCount > 3) {
+      score += 20;
+    }
+
+    if (payment.isLate || payment.isChargeback) {
+      score += 25;
+    }
+  }
+
+  if (score >= 80) {
+    return "high";
+  } else if (score >= 40) {
+    return "medium";
+  }
+
+  return "low";
+}
 
 // Expected: Low Risk
 function lowRiskExample(price, quantity) {
@@ -148,6 +186,101 @@ function mediumRiskExample(data) {
     score += 1;
   }
   return score;
+}
+
+function processOrder(order, user, inventory, coupons, shipping) {
+  if (!order || !order.items || order.items.length === 0) {
+    return { status: "INVALID", message: "Order is empty" };
+  }
+
+  let subtotal = 0;
+  let totalDiscount = 0;
+  let totalWeight = 0;
+
+  for (const item of order.items) {
+    const product = inventory.find(p => p.id === item.productId);
+
+    if (!product) {
+      return {
+        status: "INVALID",
+        message: `Product ${item.productId} not found`
+      };
+    }
+
+    if (product.stock < item.quantity) {
+      return {
+        status: "OUT_OF_STOCK",
+        message: `Insufficient stock for ${product.name}`
+      };
+    }
+
+    let itemPrice = product.price * item.quantity;
+
+    if (item.quantity >= 10) {
+      itemPrice *= 0.9;
+    } else if (item.quantity >= 5) {
+      itemPrice *= 0.95;
+    }
+
+    if (user.memberLevel === "GOLD") {
+      itemPrice *= 0.95;
+    } else if (user.memberLevel === "SILVER" && itemPrice > 500000) {
+      itemPrice *= 0.97;
+    }
+
+    if (item.category === "ELECTRONICS") {
+      totalWeight += product.weight * item.quantity;
+
+      if (shipping.type === "EXPRESS") {
+        itemPrice += 25000;
+      } else if (shipping.type === "SAME_DAY") {
+        itemPrice += 50000;
+      }
+    }
+
+    subtotal += itemPrice;
+  }
+
+  for (const coupon of coupons) {
+    if (!coupon.active || subtotal < coupon.minimumPurchase) {
+      continue;
+    }
+
+    switch (coupon.type) {
+      case "PERCENTAGE":
+        totalDiscount += subtotal * coupon.value;
+        break;
+
+      case "FIXED":
+        totalDiscount += coupon.value;
+        break;
+
+      case "SHIPPING":
+        if (totalWeight <= 5) {
+          totalDiscount += shipping.cost;
+        }
+        break;
+    }
+  }
+
+  const tax = Math.max(0, (subtotal - totalDiscount) * 0.11);
+  const finalTotal = subtotal - totalDiscount + tax + shipping.cost;
+
+  if (finalTotal > 5000000) {
+    return {
+      status: "REVIEW",
+      message: "Order requires manual review",
+      total: finalTotal
+    };
+  }
+
+  return {
+    status: "SUCCESS",
+    subtotal,
+    discount: totalDiscount,
+    tax,
+    total: finalTotal
+  };
 }
 
 // Expected: High Risk

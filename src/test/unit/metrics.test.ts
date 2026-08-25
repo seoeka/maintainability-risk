@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import { parse } from '@babel/parser';
 
 import { calculateFunctionMetrics } from '../../analyzer/metrics';
-import { describe, it } from 'node:test';
+import { describe, it } from 'mocha';
 
 type AnyNode = Record<string, any>;
 
