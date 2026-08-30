@@ -70,10 +70,12 @@ function extractTextFromResponse(json) {
     if (!json || typeof json !== 'object') {
         return undefined;
     }
-    if (typeof json.explanation === 'string' && json.explanation.trim()) {
+    if (typeof json.explanation === 'string' &&
+        json.explanation.trim()) {
         return json.explanation.trim();
     }
-    if (typeof json.output_text === 'string' && json.output_text.trim()) {
+    if (typeof json.output_text === 'string' &&
+        json.output_text.trim()) {
         return json.output_text.trim();
     }
     const output = Array.isArray(json.output)
@@ -83,7 +85,9 @@ function extractTextFromResponse(json) {
             .filter((value) => typeof value === 'string')
             .join('\n')
         : '';
-    return output.trim() ? output.trim() : undefined;
+    return output.trim()
+        ? output.trim()
+        : undefined;
 }
 function tryParseJsonText(text) {
     if (!text || typeof text !== 'string') {
@@ -113,7 +117,8 @@ function tryParseJsonText(text) {
 }
 function buildStructuredExplanation(json, fn) {
     return {
-        summary: typeof json.summary === 'string' && json.summary.trim()
+        summary: typeof json.summary === 'string' &&
+            json.summary.trim()
             ? json.summary.trim()
             : `Fungsi ${fn.functionName} memiliki risiko ${fn.risk.level} berdasarkan hasil software metrics.`,
         refactoredCode: typeof json.refactoredCode === 'string'
@@ -129,6 +134,9 @@ function buildStructuredExplanation(json, fn) {
                     'Kode relatif lebih mudah dipahami, diuji, dan dimodifikasi dibanding fungsi dengan risiko sedang atau tinggi.'
                 ]
                 : [],
+        // PENTING:
+        // Jangan fallback ke deterministicReasons di sini.
+        // Alasan dari sistem dan alasan dari LLM harus tetap terpisah.
         reasons: normalizeStringArray(json.reasons).length
             ? normalizeStringArray(json.reasons)
             : fn.risk.deterministicExplanation,
@@ -138,8 +146,12 @@ function buildStructuredExplanation(json, fn) {
         notes: typeof json.notes === 'string'
             ? json.notes.trim()
             : 'Contoh kode dan saran refactoring bersifat rekomendasi dan perlu diperiksa kembali.',
-        model: typeof json.model === 'string' ? json.model : undefined,
-        source: typeof json.source === 'string' ? json.source : undefined,
+        model: typeof json.model === 'string'
+            ? json.model
+            : undefined,
+        source: typeof json.source === 'string'
+            ? json.source
+            : undefined,
         rawText: typeof json.rawText === 'string'
             ? json.rawText
             : typeof json.explanation === 'string'
@@ -153,7 +165,8 @@ function extractExplanation(json, fn) {
     }
     const textFromResponse = extractTextFromResponse(json);
     const parsedFromText = tryParseJsonText(textFromResponse);
-    if (parsedFromText && typeof parsedFromText === 'object') {
+    if (parsedFromText &&
+        typeof parsedFromText === 'object') {
         return buildStructuredExplanation({
             ...parsedFromText,
             model: json.model,
@@ -182,19 +195,29 @@ function extractExplanation(json, fn) {
                     'Kode relatif mudah dipahami berdasarkan hasil analisis metrik.'
                 ]
                 : [],
-            reasons: fn.risk.deterministicExplanation,
+            // Tidak lagi mencampurkan alasan sistem
+            // ke bagian alasan LLM.
+            reasons: [],
             maintainabilityImpact: textFromResponse,
-            notes: 'Backend belum mengembalikan format terstruktur. Teks mentah ditampilkan pada bagian dampak.',
+            notes: 'Backend belum mengembalikan format penjelasan terstruktur. Teks mentah ditampilkan sebagai informasi tambahan.',
             rawText: textFromResponse
         };
     }
     return undefined;
 }
 async function explainWithLLM(fn, settings) {
+    /*
+     * FALLBACK 1:
+     * Pengiriman kode ke LLM dinonaktifkan.
+     */
     if (!settings.privacy.sendCodeToLLM) {
         return deterministicFallback(fn, 'Pengiriman kode ke backend LLM dinonaktifkan pada pengaturan privacy.sendCodeToLLM.');
     }
     const endpoint = settings.llm.proxyEndpoint.trim();
+    /*
+     * FALLBACK 2:
+     * Endpoint backend kosong.
+     */
     if (!endpoint) {
         return deterministicFallback(fn, 'Endpoint backend proxy belum diisi.');
     }
@@ -204,7 +227,8 @@ async function explainWithLLM(fn, settings) {
         'Content-Type': 'application/json'
     };
     if (settings.llm.proxyToken.trim()) {
-        headers['x-maintainability-token'] = settings.llm.proxyToken.trim();
+        headers['x-maintainability-token'] =
+            settings.llm.proxyToken.trim();
     }
     try {
         const response = await fetch(endpoint, {
@@ -216,20 +240,45 @@ async function explainWithLLM(fn, settings) {
         const text = await response.text();
         let json = undefined;
         try {
-            json = text ? JSON.parse(text) : undefined;
+            json =
+                text
+                    ? JSON.parse(text)
+                    : undefined;
         }
         catch {
             json = undefined;
         }
+        /*
+         * FALLBACK 3:
+         * Backend HTTP error.
+         */
         if (!response.ok) {
-            const message = json?.error || json?.message || text || `Status ${response.status}`;
+            const message = json?.error ||
+                json?.message ||
+                text ||
+                `Status ${response.status}`;
             return deterministicFallback(fn, `Backend proxy gagal dipanggil (${message}).`);
         }
+        /*
+         * Respons berhasil.
+         */
         const explanation = extractExplanation(json, fn);
-        return explanation ?? deterministicFallback(fn, 'Backend proxy tidak mengembalikan format penjelasan yang dapat dibaca.');
+        /*
+         * FALLBACK 4:
+         * Respons backend tidak dapat
+         * diproses menjadi penjelasan.
+         */
+        return (explanation ??
+            deterministicFallback(fn, 'Backend proxy tidak mengembalikan format penjelasan yang dapat dibaca.'));
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        /*
+         * FALLBACK 5:
+         * Request error / timeout / backend tidak tersedia.
+         */
+        const message = error instanceof Error
+            ? error.message
+            : String(error);
         return deterministicFallback(fn, `Backend/LLM tidak tersedia (${message}).`);
     }
     finally {
@@ -238,14 +287,21 @@ async function explainWithLLM(fn, settings) {
 }
 async function testLLMProxy(settings) {
     const endpoint = settings.llm.proxyEndpoint.trim();
+    /*
+     * Endpoint kosong.
+     */
     if (!endpoint) {
-        return { ok: false, message: 'Endpoint backend proxy belum diisi.' };
+        return {
+            ok: false,
+            message: 'Endpoint backend proxy belum diisi.'
+        };
     }
     const headers = {
         'Content-Type': 'application/json'
     };
     if (settings.llm.proxyToken.trim()) {
-        headers['x-maintainability-token'] = settings.llm.proxyToken.trim();
+        headers['x-maintainability-token'] =
+            settings.llm.proxyToken.trim();
     }
     try {
         const response = await fetch(endpoint, {
@@ -271,11 +327,16 @@ async function testLLMProxy(settings) {
                     cyclomaticComplexity: 1,
                     loc: 3
                 },
-                deterministicReasons: ['Health check koneksi backend proxy.'],
+                deterministicReasons: [
+                    'Health check koneksi backend proxy.'
+                ],
                 codeSnippet: 'function healthCheck() { return true; }',
                 model: settings.llm.model
             })
         });
+        /*
+         * Health check gagal.
+         */
         if (!response.ok) {
             const text = await response.text();
             return {
@@ -289,7 +350,9 @@ async function testLLMProxy(settings) {
         };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error
+            ? error.message
+            : String(error);
         return {
             ok: false,
             message: `Backend proxy tidak dapat dihubungi: ${message}`

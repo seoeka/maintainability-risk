@@ -209,7 +209,21 @@ module.exports = async function handler(req, res) {
     }
 
     const rawText = extractOpenAIText(json);
-    const parsed = tryParseJson(rawText) || {};
+
+    if (!rawText) {
+      return res.status(502).json({
+        error: 'OpenAI tidak mengembalikan teks penjelasan.'
+      });
+    }
+
+    const parsed = tryParseJson(rawText);
+
+    if (!parsed || typeof parsed !== 'object') {
+      return res.status(502).json({
+        error: 'Respons OpenAI tidak berupa JSON terstruktur yang valid.',
+        rawText: rawText.slice(0, 2000)
+      });
+    }
 
     const result = {
       summary: safeText(
@@ -217,15 +231,22 @@ module.exports = async function handler(req, res) {
         'LLM memberikan penjelasan berdasarkan hasil analisis software metrics.'
       ),
       refactoredCode: safeText(parsed.refactoredCode, ''),
-      refactoringSuggestions: normalizeStringArray(parsed.refactoringSuggestions),
-      positiveFindings: normalizeStringArray(parsed.positiveFindings),
+      refactoringSuggestions: normalizeStringArray(
+        parsed.refactoringSuggestions
+      ),
+      positiveFindings: normalizeStringArray(
+        parsed.positiveFindings
+      ),
       reasons: normalizeStringArray(parsed.reasons),
-      maintainabilityImpact: safeText(parsed.maintainabilityImpact, ''),
+      maintainabilityImpact: safeText(
+        parsed.maintainabilityImpact,
+        ''
+      ),
       notes: safeText(
         parsed.notes,
         'Contoh kode dan saran refactoring bersifat rekomendasi dan perlu diperiksa kembali oleh developer.'
       ),
-      explanation: rawText || 'LLM tidak mengembalikan penjelasan yang dapat dibaca.',
+      explanation: rawText,
       model,
       source: 'openai-proxy'
     };
