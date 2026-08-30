@@ -152,7 +152,7 @@ module.exports = async function handler(req, res) {
   }
 
   const body = req.body || {};
-  const maxSnippetChars = Number(process.env.MAX_SNIPPET_CHARS || 6000);
+  const maxSnippetChars = Number(process.env.MAX_SNIPPET_CHARS || 15000);
   const model = selectModel(safeText(body.model));
 
   const systemText = [
@@ -188,7 +188,7 @@ module.exports = async function handler(req, res) {
         ]
       }
     ],
-    max_output_tokens: 1200
+    max_output_tokens: 10000
   };
 
   try {
